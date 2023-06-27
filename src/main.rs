@@ -1,7 +1,7 @@
 // const CLEAR: &str = "\x1B[2J\x1B[1;1H";
 // const  CLEAR_TO_END: &str = "\033[K";
 const BAR_WIDTH:usize = 35;
-use std::{io::{self, Stdin, Write}, thread::sleep};
+use std::{io::{self, Stdin, Write}, thread::sleep, process::Command};
 use std::time;
 
 fn print_menu(stdin:&Stdin) -> String {
@@ -31,6 +31,10 @@ fn convert_to_mstext(time:i32) -> String {
     format!("{:02}:{:02}", minutes, seconds)
 }
 
+fn osx_terminal_notifier(title:&str, content:&str) {
+    Command::new("terminal-notifier").args(["-message", content, "-title", title, "-sound", "default"]).spawn().unwrap();
+}
+
 fn progress_bar(progress_text:String, progress:i32, total:i32) {
     let progress_percent:f32 = 1.0 - progress as f32 /total as f32;
     let passed =  "*".repeat((progress_percent*BAR_WIDTH as f32 ) as usize);
@@ -49,6 +53,7 @@ fn countdown_tomato(time:i32) {
         progress_bar(remain_text, time_remain, total_time);
         sleep(time::Duration::from_secs(1));
     }
+    osx_terminal_notifier("倒计时结束", "请选择下一项任务");
 }
 
 fn main() -> io::Result<()> {
