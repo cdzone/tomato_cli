@@ -5,7 +5,7 @@ use std::{io::{self, Stdin, Write}, thread::sleep};
 use std::time;
 
 fn print_menu(stdin:&Stdin) -> String {
-    println!("\n\n--- 命令行番茄钟 ---\n菜单时间 {}", chrono::Utc::now().format("%Y-%m-%d %H:%M:%S"));
+    println!("\n\n--- 命令行番茄钟 ---\n菜单时间 {}", chrono::Local::now().format("%Y-%m-%d %H:%M:%S"));
     println!("1. Pomodoro（25分钟）");
     println!("2. Short break（5分钟）");
     println!("3. Long break（10分钟）");
@@ -28,7 +28,7 @@ fn print_menu(stdin:&Stdin) -> String {
 fn convert_to_mstext(time:i32) -> String {
     let minutes = time / 60;
     let seconds = time % 60;
-    format!("{}:{}", minutes, seconds)
+    format!("{:02}:{:02}", minutes, seconds)
 }
 
 fn progress_bar(progress_text:String, progress:i32, total:i32) {
