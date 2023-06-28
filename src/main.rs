@@ -1,8 +1,15 @@
-// const CLEAR: &str = "\x1B[2J\x1B[1;1H";
-// const  CLEAR_TO_END: &str = "\033[K";
 const BAR_WIDTH:usize = 35;
 use std::{io::{self, Stdin, Write}, thread::sleep, process::Command};
 use std::time;
+use clap::Parser;
+
+#[derive(Parser, Debug)]
+#[clap(author="cdzone<cdzone@yeah.net>", version="0.2", about="A simple cli tomato clock.", long_about = None)]
+struct Args {
+    #[clap(short='s', long="shout_loud", value_parser, default_value_t = 1)]
+    shout_times: i32,
+}
+
 
 fn print_menu(stdin:&Stdin) -> String {
     println!("\n\n--- 命令行番茄钟 ---\n菜单时间 {}", chrono::Local::now().format("%Y-%m-%d %H:%M:%S"));
@@ -43,7 +50,7 @@ fn progress_bar(progress_text:String, progress:i32, total:i32) {
     io::stdout().flush().unwrap();
 }
 
-fn countdown_tomato(time:i32) {
+fn countdown_tomato(time:i32, notify_times:i32) {
     let mut time_remain = time;
     let total_time = time;
     while time_remain > 0 {
@@ -53,10 +60,17 @@ fn countdown_tomato(time:i32) {
         progress_bar(remain_text, time_remain, total_time);
         sleep(time::Duration::from_secs(1));
     }
-    osx_terminal_notifier("倒计时结束", "请选择下一项任务");
+    let mut notified_times = 0 ;
+    while notified_times < notify_times{
+        osx_terminal_notifier("倒计时结束", "请选择下一项任务");
+        notified_times = notified_times + 1; 
+        sleep(time::Duration::from_secs(10));
+    }
 }
 
 fn main() -> io::Result<()> {
+    let args = Args::parse();
+    let shout_times = args.shout_times;
     let stdin = io::stdin();
     loop {
         let input_cmd = print_menu(&stdin);
@@ -67,7 +81,7 @@ fn main() -> io::Result<()> {
             "3" => 600,
             &_ => break,
         };
-        let count_handler = std::thread::spawn(move || countdown_tomato(time_length));
+        let count_handler = std::thread::spawn(move || countdown_tomato(time_length, shout_times));
         count_handler.join().unwrap();
     }
     Ok(())
