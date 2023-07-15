@@ -1,5 +1,5 @@
 const BAR_WIDTH:usize = 35;
-use std::{io::{self, Stdin, Write}, thread::sleep, process::Command};
+use std::{io::{self, Stdin, Write}, thread::sleep, process::{Command, Stdio}, path::Path};
 use std::time;
 use clap::Parser;
 
@@ -8,6 +8,8 @@ use clap::Parser;
 struct Args {
     #[clap(short='s', long="shout_loud", value_parser, default_value_t = 1)]
     shout_times: i32,
+    #[clap(short='n', long="notify_sound", value_parser)]
+    notify_sound:Option<String>,
 }
 
 
@@ -38,8 +40,25 @@ fn convert_to_mstext(time:i32) -> String {
     format!("{:02}:{:02}", minutes, seconds)
 }
 
-fn osx_terminal_notifier(title:&str, content:&str) {
+fn osx_terminal_notifier(title:&str, content:&str, sound:Option<String>) {
+    if let Some(sound_path) = sound {
+        if check_path_exist(&sound_path) {
+            Command::new("terminal-notifier").args(["-message", content, "-title", title]).spawn().unwrap();
+            Command::new("ffplay").args(["-i", &sound_path, "-autoexit", "-nodisp"]).stdout(Stdio::null()).stderr(Stdio::null()).spawn().unwrap();
+            return ;
+        } 
+    }
     Command::new("terminal-notifier").args(["-message", content, "-title", title, "-sound", "default"]).spawn().unwrap();
+}
+
+fn check_path_exist(path:&str) -> bool {
+    let path_obj = Path::new(path);
+    if path_obj.exists() {
+        true
+    } else {
+        println!("{path} not exist!");
+        false
+    }
 }
 
 fn progress_bar(progress_text:String, progress:i32, total:i32) {
@@ -50,7 +69,7 @@ fn progress_bar(progress_text:String, progress:i32, total:i32) {
     io::stdout().flush().unwrap();
 }
 
-fn countdown_tomato(time:i32, notify_times:i32) {
+fn countdown_tomato(time:i32, notify_times:i32, shout_sound:Option<String>) {
     let mut time_remain = time;
     let total_time = time;
     while time_remain > 0 {
@@ -62,7 +81,8 @@ fn countdown_tomato(time:i32, notify_times:i32) {
     }
     let mut notified_times = 0 ;
     while notified_times < notify_times{
-        osx_terminal_notifier("倒计时结束", "请选择下一项任务");
+        let shout_sound_dup = shout_sound.clone();
+        osx_terminal_notifier("倒计时结束", "请选择下一项任务", shout_sound_dup);
         notified_times = notified_times + 1; 
         sleep(time::Duration::from_secs(10));
     }
@@ -72,6 +92,7 @@ fn main() -> io::Result<()> {
     let args = Args::parse();
     let shout_times = args.shout_times;
     let stdin = io::stdin();
+    let shout_sound = args.notify_sound;
     loop {
         let input_cmd = print_menu(&stdin);
         // println!("input cmd: {}", input_cmd);
@@ -81,7 +102,8 @@ fn main() -> io::Result<()> {
             "3" => 600,
             &_ => break,
         };
-        let count_handler = std::thread::spawn(move || countdown_tomato(time_length, shout_times));
+        let shout_sound_arg = shout_sound.clone();
+        let count_handler = std::thread::spawn(move || countdown_tomato(time_length, shout_times, shout_sound_arg));
         count_handler.join().unwrap();
     }
     Ok(())
